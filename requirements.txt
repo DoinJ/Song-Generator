@@ -1,0 +1,7 @@
+# Song Generator - Web Dependencies
+# Core web framework
+flask>=2.3.0
+
+# The YuE model dependencies should already be installed in the conda environment.
+# See /mnt/nas10_shared/jaden/YuE/requirements.txt for the full list.
+# Key dependencies include: torch, transformers, torchaudio, soundfile, einops, omegaconf, etc.

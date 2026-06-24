@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Song Generator — Powered by YuE</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎵</text></svg>">
+    <style>
+        /* ─── Reset & Base ─────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --bg-input: #1e1e1e;
+            --text-primary: #f1f1f1;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6b6b6b;
+            --accent: #8b5cf6;
+            --accent-hover: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: #333;
+            --border-light: #2a2a2a;
+            --radius-sm: 8px;
+            --radius: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 24px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+            --transition: 0.2s ease;
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Layout ─────────────────────────── */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* ─── Header ─────────────────────────── */
+        .header {
+            text-align: center;
+            padding: 24px 0 8px;
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c084fc, #8b5cf6, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        /* ─── Chat Area ─────────────────────────── */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ─── Messages ─────────────────────────── */
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeInUp 0.35s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user { flex-direction: row-reverse; }
+
+        .message-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            background: var(--bg-tertiary);
+        }
+        .message.user .message-avatar { background: var(--accent); }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            position: relative;
+        }
+        .message.assistant .message-bubble {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-bottom-left-radius: 6px;
+        }
+        .message.user .message-bubble {
+            background: var(--accent);
+            border-bottom-right-radius: 6px;
+            color: #fff;
+        }
+
+        /* ─── Input Card ─────────────────────────── */
+        .input-section {
+            flex-shrink: 0;
+            padding-bottom: 20px;
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(180deg, transparent 0%, var(--bg-primary) 20%);
+            padding-top: 24px;
+        }
+
+        .input-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .input-card textarea {
+            width: 100%;
+            min-height: 80px;
+            max-height: 200px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+        .input-card textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .input-actions-left {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .btn:hover { background: var(--border); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        .btn-icon {
+            width: 36px; height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: var(--radius-sm);
+        }
+
+        .btn-tag {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-tag:hover, .btn-tag.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* ─── Settings Panel ─────────────────────────── */
+        .settings-panel {
+            display: none;
+            margin-top: 12px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-light);
+            animation: fadeIn 0.25s ease;
+        }
+        .settings-panel.open { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .settings-field label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .settings-field select,
+        .settings-field input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border var(--transition);
+        }
+        .settings-field select:focus,
+        .settings-field input:focus {
+            border-color: var(--accent);
+        }
+
+        .ref-upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+        .ref-upload-zone:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .ref-upload-zone.has-file {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .ref-upload-zone input[type="file"] { display: none; }
+
+        /* ─── Progress Bar ─────────────────────────── */
+        .progress-container {
+            display: none;
+            margin-top: 10px;
+        }
+        .progress-container.active { display: block; }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        .progress-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        /* ─── Audio Player ─────────────────────────── */
+        .audio-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border-light);
+        }
+        .audio-card audio {
+            flex: 1;
+            min-width: 200px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            outline: none;
+        }
+        .audio-card audio::-webkit-media-controls-panel {
+            background: #2a2a2a;
+        }
+        .audio-card audio::-webkit-media-controls-play-button {
+            filter: invert(1);
+        }
+        .audio-card .audio-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ─── Empty State ─────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state .icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        .empty-state h3 {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .empty-state p {
+            font-size: 13px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ─── Suggestions ─────────────────────────── */
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+        .suggestion-chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .suggestion-chip:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+            background: var(--bg-tertiary);
+        }
+
+        /* ─── Toast ─────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--error);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            box-shadow: var(--shadow-lg);
+        }
+        .toast.show { display: block; animation: fadeInUp 0.3s ease; }
+
+        /* ─── Scrollbar ─────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ─── Responsive ─────────────────────────── */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 22px; }
+            .message-bubble { max-width: 90%; font-size: 14px; }
+            .input-actions { flex-direction: column; }
+            .input-actions-left { width: 100%; justify-content: center; }
+            .btn-primary { width: 100%; justify-content: center; }
+            .settings-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎵 Song Generator</h1>
+            <p>Create original songs with AI · Powered by YuE</p>
+        </header>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div class="icon">🎼</div>
+                <h3>Describe your song...</h3>
+                <p>Enter lyrics, pick a style, and let AI compose a unique song for you. You can also upload a reference track to guide the style.</p>
+                <div class="suggestions">
+                    <span class="suggestion-chip" onclick="fillExample('pop')">🎤 Pop Love Song</span>
+                    <span class="suggestion-chip" onclick="fillExample('rock')">🎸 Rock Anthem</span>
+                    <span class="suggestion-chip" onclick="fillExample('lofi')">☕ Lofi Chill</span>
+                    <span class="suggestion-chip" onclick="fillExample('rap')">🎧 Hip-Hop Beat</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-card">
+                <textarea 
+                    id="lyricsInput" 
+                    placeholder="Type your lyrics here with structure tags like [verse], [chorus]...&#10;&#10;Or just describe what kind of song you want, and we'll help you generate lyrics!"
+                    rows="3"
+                ></textarea>
+
+                <!-- Quick Tags -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" id="quickTags">
+                    {% for tag in tags[:12] %}
+                    <span class="btn-tag" onclick="toggleTag(this, '{{ tag }}')">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- Actions -->
+                <div class="input-actions">
+                    <div class="input-actions-left">
+                        <button class="btn" onclick="toggleSettings()" title="Advanced Settings">
+                            ⚙️ Settings
+                        </button>
+                        <button class="btn" id="refAudioBtn" onclick="document.getElementById('refAudioInput').click()" title="Upload reference audio">
+                            🎧 Reference
+                        </button>
+                        <input type="file" id="refAudioInput" accept=".mp3,.wav,.flac,.ogg,.m4a" style="display:none" onchange="handleRefAudio(this)">
+                        <span id="refFileName" style="font-size:11px;color:var(--text-muted);margin-left:4px;"></span>
+                    </div>
+                    <button class="btn btn-primary" id="generateBtn" onclick="generateSong()">
+                        ✨ Generate Song
+                    </button>
+                </div>
+
+                <!-- Settings Panel -->
+                <div class="settings-panel" id="settingsPanel">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label>Model / Language</label>
+                            <select id="modelSelect">
+                                {% for key, model in models.items() %}
+                                <option value="{{ key }}">{{ model.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="settings-field">
+                            <label>Segments (song sections)</label>
+                            <input type="number" id="segmentsInput" value="2" min="1" max="8">
+                        </div>
+                        <div class="settings-field">
+                            <label>Max Tokens per Segment</label>
+                            <input type="number" id="maxTokensInput" value="3000" min="500" max="8000" step="500">
+                        </div>
+                        <div class="settings-field">
+                            <label>Repetition Penalty</label>
+                            <input type="number" id="repPenaltyInput" value="1.1" min="1.0" max="2.0" step="0.05">
+                        </div>
+                        <div class="settings-field">
+                            <label>Stage 2 Batch Size</label>
+                            <input type="number" id="batchSizeInput" value="4" min="1" max="16">
+                        </div>
+                        <div class="settings-field">
+                            <label>Random Seed</label>
+                            <input type="number" id="seedInput" value="42" min="0" max="99999">
+                        </div>
+                        <div class="settings-field">
+                            <label>GPU Index</label>
+                            <input type="number" id="cudaIdxInput" value="0" min="0" max="7">
+                        </div>
+                    </div>
+                    <!-- Reference audio section in settings -->
+                    <div class="ref-upload-zone" id="refDropZone" onclick="document.getElementById('refAudioInput').click()">
+                        📁 Drop reference audio here or click to upload (MP3, WAV, FLAC)
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Preparing...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        // ─── State ─────────────────────────────────
+        let selectedTags = [];
+        let refAudioFile = null;
+        let currentJobId = null;
+        let pollingInterval = null;
+
+        // ─── Tag Toggle ────────────────────────────
+        function toggleTag(el, tag) {
+            el.classList.toggle('active');
+            if (el.classList.contains('active')) {
+                selectedTags.push(tag);
+            } else {
+                selectedTags = selectedTags.filter(t => t !== tag);
+            }
+        }
+
+        // ─── Settings Toggle ───────────────────────
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('open');
+        }
+
+        // ─── Reference Audio ───────────────────────
+        function handleRefAudio(input) {
+            if (input.files && input.files[0]) {
+                refAudioFile = input.files[0];
+                document.getElementById('refFileName').textContent = '📎 ' + refAudioFile.name;
+                document.getElementById('refDropZone').classList.add('has-file');
+                document.getElementById('refDropZone').textContent = '✅ ' + refAudioFile.name;
+            }
+        }
+
+        // ─── Drag & Drop ───────────────────────────
+        const dropZone = document.getElementById('refDropZone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                refAudioFile = files[0];
+                document.getElementById('refFileName').textContent = '📎 ' + refAudioFile.name;
+                dropZone.classList.add('has-file');
+                dropZone.textContent = '✅ ' + refAudioFile.name;
+            }
+        });
+
+        // ─── Fill Example ──────────────────────────
+        function fillExample(type) {
+            const examples = {
+                pop: {
+                    lyrics: "[verse]\nWaking up to morning light\nYour smile makes everything feel right\nEvery moment spent with you\nFeels like a dream come true\n\n[chorus]\nYou're the melody in my heart\nWe'll never be apart\nDancing under stars above\nLost in this thing called love\n\n[bridge]\nAnd when the world gets heavy\nYou make it light and steady\n\n[chorus]\nYou're the melody in my heart\nWe'll never be apart\nDancing under stars above\nLost in this thing called love",
+                    tags: ['Pop', 'romantic', 'uplifting', 'female', 'airy', 'vocal'],
+                },
+                rock: {
+                    lyrics: "[verse]\nStanding on the edge of night\nFire burning deep inside\nBreaking chains that held me down\nI'm gonna take this town\n\n[chorus]\nRise up! Hear the thunder call\nRise up! We will never fall\nWith hearts of steel and souls on fire\nWe're climbing higher and higher\n\n[verse]\nThe road is long, the stakes are high\nBut I see victory in your eyes\nTogether we can't be denied\nIt's our time to shine",
+                    tags: ['Rock', 'energetic', 'powerful', 'male', 'guitar', 'drums'],
+                },
+                lofi: {
+                    lyrics: "[verse]\nRaindrops on the window pane\nQuiet thoughts inside my brain\nCoffee steam and jazz-like beats\nSimple life, these little treats\n\n[chorus]\nLet the hours slip away\nIn this cozy hideaway\nNothing left to do today\nJust let the music play",
+                    tags: ['lofi', 'chill', 'acoustic', 'soft', 'female', 'piano'],
+                },
+                rap: {
+                    lyrics: "[verse]\nSteppin' to the mic with a story to tell\nCame from the bottom, now I'm doing well\nEvery setback just made me strong\nNow I'm here to prove them wrong\n\n[chorus]\nThis is my moment, my time to shine\nEvery line I spit is by design\nBuilt from nothing, watch me climb\nWriting history one rhyme at a time",
+                    tags: ['Hip-hop', 'Rap', 'groovy', 'male', 'bass', 'drums'],
+                },
+            };
+
+            const ex = examples[type];
+            document.getElementById('lyricsInput').value = ex.lyrics;
+
+            // Reset tags
+            document.querySelectorAll('.btn-tag').forEach(el => el.classList.remove('active'));
+            selectedTags = [];
+            ex.tags.forEach(tag => {
+                const chip = document.querySelector(`.btn-tag`); // This is simplified
+            });
+            // Select matching tags
+            document.querySelectorAll('.btn-tag').forEach(el => {
+                if (ex.tags.includes(el.textContent.trim())) {
+                    el.classList.add('active');
+                    selectedTags.push(el.textContent.trim());
+                }
+            });
+
+            document.getElementById('lyricsInput').focus();
+        }
+
+        // ─── Generate Song ─────────────────────────
+        async function generateSong() {
+            const lyrics = document.getElementById('lyricsInput').value.trim();
+            if (!lyrics) {
+                showToast('Please enter some lyrics or a song description first!');
+                return;
+            }
+
+            // Hide empty state
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.style.display = 'none';
+
+            // Build genre string from tags
+            const genreStr = selectedTags.length > 0 ? selectedTags.join(' ') : 'pop uplifting melodic female airy vocal';
+
+            // Show user message
+            addMessage('user', `<strong>🎤 My Song Request</strong><br><br>${escapeHtml(lyrics.substring(0, 300))}${lyrics.length > 300 ? '...' : ''}<br><br><small style="color:#a78bfa">🎵 ${genreStr}</small>`);
+
+            // Add assistant placeholder
+            const assistantMsg = addMessage('assistant', '', true);
+            const bubble = assistantMsg.querySelector('.message-bubble');
+
+            // Show progress
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            progressContainer.classList.add('active');
+            progressFill.style.width = '5%';
+            progressText.textContent = 'Submitting your song...';
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+
+            // Build form data
+            const formData = new FormData();
+            formData.append('lyrics', lyrics);
+            formData.append('genre', genreStr);
+            formData.append('model', document.getElementById('modelSelect').value);
+            formData.append('segments', document.getElementById('segmentsInput').value);
+            formData.append('max_tokens', document.getElementById('maxTokensInput').value);
+            formData.append('repetition_penalty', document.getElementById('repPenaltyInput').value);
+            formData.append('batch_size', document.getElementById('batchSizeInput').value);
+            formData.append('seed', document.getElementById('seedInput').value);
+            formData.append('cuda_idx', document.getElementById('cudaIdxInput').value);
+            
+            if (refAudioFile) {
+                formData.append('audio_prompt', refAudioFile);
+            }
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to start generation');
+                }
+
+                currentJobId = data.job_id;
+                const queueMsg = data.message || 'Starting generation...';
+                bubble.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:20px;">🎶</span>
+                    <span>${escapeHtml(queueMsg)} <span id="statusText"></span></span>
+                </div>`;
+
+                // Start polling for progress
+                startPolling(currentJobId, bubble, progressFill, progressText);
+
+            } catch (err) {
+                bubble.innerHTML = `<span style="color:var(--error)">❌ Error: ${escapeHtml(err.message)}</span>`;
+                progressContainer.classList.remove('active');
+                generateBtn.disabled = false;
+                generateBtn.textContent = '✨ Generate Song';
+            }
+        }
+
+        async function startPolling(jobId, bubble, progressFill, progressText) {
+            const generateBtn = document.getElementById('generateBtn');
+            const progressContainer = document.getElementById('progressContainer');
+
+            const checkStatus = async () => {
+                try {
+                    const resp = await fetch(`/api/status/${jobId}`);
+                    const data = await resp.json();
+
+                    progressFill.style.width = data.progress + '%';
+                    
+                    let statusMsg = '';
+                    switch (data.status) {
+                        case 'waiting': statusMsg = '⏳ Waiting for GPU... (another song is finishing)'; break;
+                        case 'queued': statusMsg = 'In queue...'; break;
+                        case 'preparing': statusMsg = 'Preparing models...'; break;
+                        case 'generating': statusMsg = 'Stage 1: Composing melody & vocals...'; break;
+                        case 'stage2': statusMsg = 'Stage 2: Refining audio quality...'; break;
+                        case 'done': statusMsg = '✅ Complete!'; break;
+                        case 'error': statusMsg = '❌ Error'; break;
+                        default: statusMsg = data.status;
+                    }
+                    progressText.textContent = statusMsg;
+
+                    if (data.status === 'done') {
+                        // Show audio player
+                        const listenUrl = `/api/listen/${jobId}`;
+                        const downloadUrl = `/api/download/${jobId}`;
+                        bubble.innerHTML = `
+                            <div style="margin-bottom:10px;">
+                                <strong>🎵 Your Song is Ready!</strong>
+                                <p style="color:var(--text-secondary);font-size:13px;margin-top:4px;">Generated with YuE AI</p>
+                            </div>
+                            <div class="audio-card">
+                                <audio controls src="${listenUrl}"></audio>
+                                <div class="audio-actions">
+                                    <a href="${listenUrl}" target="_blank" class="btn" style="font-size:13px;">▶ Listen</a>
+                                    <a href="${downloadUrl}" class="btn btn-primary" download style="font-size:13px;">⬇ Download</a>
+                                </div>
+                            </div>
+                        `;
+                        progressContainer.classList.remove('active');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = '✨ Generate Another';
+                        stopPolling();
+                        return;
+                    }
+
+                    if (data.status === 'error') {
+                        bubble.innerHTML = `<span style="color:var(--error)">❌ Generation failed: ${escapeHtml(data.error || 'Unknown error')}</span>`;
+                        progressContainer.classList.remove('active');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = '✨ Try Again';
+                        stopPolling();
+                        return;
+                    }
+
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            };
+
+            pollingInterval = setInterval(checkStatus, 3000);
+            checkStatus(); // Immediate first check
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // ─── Helpers ───────────────────────────────
+        function addMessage(role, content, isPlaceholder = false) {
+            const chatArea = document.getElementById('chatArea');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            
+            const avatar = role === 'user' ? '👤' : '🎵';
+            div.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-bubble">${content}</div>
+            `;
+            
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            return div;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ─── Keyboard Shortcut ─────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                generateSong();
+            }
+        });
+
+        // ─── Init ──────────────────────────────────
+        console.log('🎵 Song Generator ready!');
+        console.log('💡 Tip: Press Ctrl+Enter to generate');
+    </script>
+</body>
+</html>
