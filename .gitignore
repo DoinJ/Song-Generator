@@ -2,6 +2,9 @@
 outputs/
 uploads/
 
+# Fine-tune artifacts (writable copy of YuE finetune/ + all generated data)
+yue-ft/
+
 # Python
 __pycache__/
 *.pyc
