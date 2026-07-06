@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Step 4 — Encode audio into xcodec discrete codes (.npy).
 
-For each song, produce three arrays under NPY_DIR (shape (1, T), T ~= 50*seconds):
-    <id>.npy               <- original full mix   (JSONL "codec")
-    <id>.Vocals.npy        <- vocal stem          (JSONL "vocals_codec")
-    <id>.Instrumental.npy  <- instrumental stem   (JSONL "instrumental_codec")
+For each song, produce a single array under NPY_DIR (shape (1, T), T ~= 50*seconds):
+    <id>.npy               <- full mix  (JSONL "codec")
+
+CoT training only reads the mix; separation (vocals/instrumental) is skipped.
+vocals_codec and instrumental_codec in the JSONL point at the same mix file.
 
 The encoder is YuE's own xcodec (SoundStream) loaded exactly like inference/infer.py
 (lines 97-104), and the load/encode helpers are copied verbatim from infer.py
@@ -56,9 +57,19 @@ def encode_audio(codec_model, audio_prompt, device, target_bw=0.5):
 
 
 def load_codec_model(device):
-    """Build + load the xcodec SoundStream encoder (infer.py:99-104)."""
-    model_config = OmegaConf.load(str(C.XCODEC_CONFIG))
-    codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
+    """Build + load the xcodec SoundStream encoder (infer.py:99-104).
+
+    The SoundStream constructor loads a HuBERT model from a RELATIVE path
+    (./xcodec_mini_infer/semantic_ckpts/...), so we temporarily chdir to the
+    inference directory — exactly what infer.py does by running from there."""
+    import os as _os
+    saved = _os.getcwd()
+    try:
+        _os.chdir(str(C.YUE_INFERENCE_DIR))
+        model_config = OmegaConf.load(str(C.XCODEC_CONFIG))
+        codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
+    finally:
+        _os.chdir(saved)
     params = torch.load(str(C.XCODEC_CKPT), map_location="cpu", weights_only=False)
     codec_model.load_state_dict(params["codec_model"])
     codec_model.to(device)
@@ -81,11 +92,7 @@ def read_manifest():
 
 
 def npy_done(sid):
-    return (
-        (C.NPY_DIR / f"{sid}.npy").exists()
-        and (C.NPY_DIR / f"{sid}.Vocals.npy").exists()
-        and (C.NPY_DIR / f"{sid}.Instrumental.npy").exists()
-    )
+    return (C.NPY_DIR / f"{sid}.npy").exists()
 
 
 def main():
@@ -113,20 +120,12 @@ def main():
             skipped += 1
             continue
         mix = Path(r["file"])
-        voc = C.STEMS_DIR / sid / "vocals.wav"
-        inst = C.STEMS_DIR / sid / "no_vocals.wav"
-        if not voc.exists() or not inst.exists():
-            print(f"[{sid}] stems missing; run 01_separate.py first", file=sys.stderr)
-            failed += 1
-            continue
         try:
             s_mix = encode_to_npy(codec_model, device, mix, C.NPY_DIR / f"{sid}.npy")
-            s_voc = encode_to_npy(codec_model, device, voc, C.NPY_DIR / f"{sid}.Vocals.npy")
-            s_inst = encode_to_npy(codec_model, device, inst, C.NPY_DIR / f"{sid}.Instrumental.npy")
             dur = float(r["duration_sec"]) if r["duration_sec"] else 0.0
             fps = s_mix[1] / dur if dur else float("nan")
             flag = "" if 49 <= fps <= 51 else "  <-- WARNING fps out of [49,51], will be skipped in preprocess"
-            print(f"[{sid}] mix{s_mix} voc{s_voc} inst{s_inst}  fps={fps:.2f}{flag}")
+            print(f"[{sid}] mix{s_mix}  fps={fps:.2f}{flag}")
             ok += 1
         except Exception as e:
             failed += 1

@@ -26,9 +26,13 @@ SEQ_LEN="${SEQ_LEN:-8192}"
 
 BINS=$(find "$PARENT" -name "*_text_document.bin" -type f | sort)
 if [ -z "$BINS" ]; then
-    echo "ERROR: no *_text_document.bin under $PARENT. Run preprocess_cantonese.sh first."
+    echo "ERROR: no *_text_document.bin under $PARENT."
+    echo "  Run: bash preprocess_cantonese.sh cot \$TOKENIZER"
+    echo "  (CoT mode is sufficient for Stage-1 LoRA; ICL needs separated stems.)"
     exit 1
 fi
+echo "Found $(echo "$BINS" | wc -l) mmap(s):"
+echo "$BINS" | while read b; do echo "  $b"; done
 
 echo "Counting tokens (synchronous) ..."
 mkdir -p "$LOG_DIR"

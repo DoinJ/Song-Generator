@@ -21,9 +21,6 @@ python 00_inventory.py
 echo "== Step L: crawl lyrics (lrclib) =="
 python fetch_lyrics.py $LIMIT_ARG
 
-echo "== Step 1: separation =="
-python 01_separate.py $LIMIT_ARG
-
 echo "== Step 2: MSA (backend=$MSA_BACKEND) =="
 python 02_msa.py --backend "$MSA_BACKEND" $LIMIT_ARG
 

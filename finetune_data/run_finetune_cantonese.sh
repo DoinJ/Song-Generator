@@ -31,7 +31,8 @@ DATA_SPLIT="${DATA_SPLIT:-900,50,50}"
 
 # ── Model config ──
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-/mnt/nas10_shared/jaden/YuE/inference/mm_tokenizer_v0.2_hf/tokenizer.model}"
-MODEL_NAME="${MODEL_NAME:-m-a-p/YuE-s1-7B-anneal-en-cot}"   # en-cot: user finds it better on Cantonese than zh-cot
+# Local model dir with symlinked weights + tokenizer (avoids HF Hub permission issues)
+MODEL_NAME="${MODEL_NAME:-/home/jaden/projects/Song-Generator/yue-ft/cache/models/YuE-s1-7B-anneal-en-cot}"
 MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-../cache/models}"
 OUTPUT_DIR="${OUTPUT_DIR:-../output/cantonese-lora}"
 DEEPSPEED_CONFIG="${DEEPSPEED_CONFIG:-config/ds_config_zero2.json}"
@@ -59,6 +60,9 @@ if [ "$(basename "$PWD")" != "finetune" ]; then
 fi
 
 mkdir -p "$DATA_CACHE_PATH" "$MODEL_CACHE_DIR" "$OUTPUT_DIR"
+# HF cache writes go to our writable dir (shared /local_shared is read-only for us)
+export HF_HOME="${HF_HOME:-../cache/huggingface}"
+mkdir -p "$HF_HOME"
 export PYTHONPATH=$PWD:$PYTHONPATH
 
 echo "==============================================="
@@ -66,7 +70,7 @@ echo "GPU(s): $CUDA_VISIBLE_DEVICES | global batch: $GLOBAL_BATCH_SIZE | base: $
 echo "Output: $OUTPUT_DIR"
 echo "==============================================="
 
-CMD="torchrun --nproc_per_node=$NUM_GPUS --master_port=$MASTER_PORT scripts/train_lora.py \
+CMD="python scripts/train_lora.py \
     --seq-length $SEQ_LENGTH \
     --data-path $DATA_PATH \
     --data-cache-path $DATA_CACHE_PATH \
@@ -78,8 +82,7 @@ CMD="torchrun --nproc_per_node=$NUM_GPUS --master_port=$MASTER_PORT scripts/trai
     --train-iters $TRAIN_ITERS \
     --num-train-epochs $NUM_TRAIN_EPOCHS \
     --logging-steps $LOGGING_STEPS \
-    --save-steps $SAVE_STEPS \
-    --deepspeed $DEEPSPEED_CONFIG"
+    --save-steps $SAVE_STEPS"
 
 if [ "$USE_WANDB" = true ]; then
     CMD="$CMD --report-to wandb --run-name \"$RUN_NAME\""

@@ -68,12 +68,11 @@ def main():
     for r in rows:
         sid = r["id"]
         mix = C.NPY_DIR / f"{sid}.npy"
-        voc = C.NPY_DIR / f"{sid}.Vocals.npy"
-        inst = C.NPY_DIR / f"{sid}.Instrumental.npy"
         seg_path = C.SEGMENTS_DIR / f"{sid}.segments.json"
         msa_path = C.MSA_DIR / f"{sid}.msa.json"
 
-        missing = [p.name for p in (mix, voc, inst, seg_path, msa_path) if not p.exists()]
+        # CoT training only reads codec (mix); vocals/instrumental point at the same file
+        missing = [p.name for p in (mix, seg_path, msa_path) if not p.exists()]
         if missing:
             skipped.append((sid, f"missing {missing}"))
             continue
@@ -90,11 +89,13 @@ def main():
         segments = json.loads(seg_path.read_text(encoding="utf-8"))
         msa = json.loads(msa_path.read_text(encoding="utf-8"))
 
+        # CoT training only reads codec (full mix); vocals/instrumental not needed
+        npy_abs = str(mix.resolve())
         rec = {
             "id": sid,
-            "codec": str(mix.resolve()),
-            "vocals_codec": str(voc.resolve()),
-            "instrumental_codec": str(inst.resolve()),
+            "codec": npy_abs,
+            "vocals_codec": npy_abs,
+            "instrumental_codec": npy_abs,
             "audio_length_in_sec": round(dur, 2),
             "msa": msa,
             "genres": genres_map.get(sid, DEFAULT_GENRES),
