@@ -52,7 +52,14 @@ def main():
     model = model.merge_and_unload()
 
     print(f"Saving merged model -> {args.out}")
-    model.save_pretrained(args.out, safe_serialization=True)
+
+    # Use low-level save to avoid save_pretrained -> unwrap_model -> DeepSpeed
+    # import, which fails when nvcc is missing. Model is a plain LlamaForCausalLM
+    # after merge_and_unload.
+    import os as _os
+    _os.makedirs(args.out, exist_ok=True)
+    torch.save(model.state_dict(), f"{args.out}/pytorch_model.bin")
+    model.config.save_pretrained(args.out)
 
     # Save a tokenizer alongside so the dir is self-contained (prefer the adapter's).
     for src in (args.adapter, args.base):

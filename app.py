@@ -66,6 +66,13 @@ MODELS = OrderedDict({
         "description": "Chinese/Mandarin song generation with reference audio",
         "icl": True,
     },
+    "cantonese_cot": {
+        "name": "Cantonese (CoT - Fine-tuned)",
+        "stage1": str(BASE_DIR / "yue-ft" / "output" / "cantonese-merged"),
+        "stage2": "m-a-p/YuE-s2-1B-general",
+        "description": "Cantonese cantopop LoRA fine-tuned on 200 classics",
+        "icl": False,
+    },
     "japanese_cot": {
         "name": "Japanese / Korean (CoT)",
         "stage1": "m-a-p/YuE-s1-7B-anneal-jp-kr-cot",
