@@ -653,12 +653,30 @@
                 return;
             }
 
+            // ─── Extract [Genre] from lyrics text ────────────
+            // Priority: explicit [Genre] line > clicked tags > default
+            const genreMatch = lyrics.match(/^\[genre\]\s*(.+)$/im);
+            let lyricsToSend = lyrics;
+            let parsedGenre = null;
+            if (genreMatch) {
+                parsedGenre = genreMatch[1].trim();
+                // Strip the [Genre] line from lyrics — not a valid YuE structure tag
+                lyricsToSend = lyrics.replace(/^\[genre\].*\n?/im, '').trim();
+            }
+
+            // Build genre string
+            let genreStr;
+            if (parsedGenre) {
+                genreStr = parsedGenre;
+            } else if (selectedTags.length > 0) {
+                genreStr = selectedTags.join(' ');
+            } else {
+                genreStr = 'pop uplifting melodic female airy vocal';
+            }
+
             // Hide empty state
             const emptyState = document.getElementById('emptyState');
             if (emptyState) emptyState.style.display = 'none';
-
-            // Build genre string from tags
-            const genreStr = selectedTags.length > 0 ? selectedTags.join(' ') : 'pop uplifting melodic female airy vocal';
 
             // Show user message
             addMessage('user', `<strong>🎤 My Song Request</strong><br><br>${escapeHtml(lyrics.substring(0, 300))}${lyrics.length > 300 ? '...' : ''}<br><br><small style="color:#a78bfa">🎵 ${genreStr}</small>`);
@@ -681,7 +699,7 @@
 
             // Build form data
             const formData = new FormData();
-            formData.append('lyrics', lyrics);
+            formData.append('lyrics', lyricsToSend);
             formData.append('genre', genreStr);
             formData.append('model', document.getElementById('modelSelect').value);
             formData.append('segments', document.getElementById('segmentsInput').value);
